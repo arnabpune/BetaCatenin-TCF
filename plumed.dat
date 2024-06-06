@@ -1,0 +1,44 @@
+RESTART
+
+chaina: GROUP  NDX_FILE=index.ndx NDX_GROUP=r_140-663_&_CA
+chainb: GROUP  NDX_FILE=index.ndx NDX_GROUP=r_1-49_&_CA
+
+
+
+
+ref1: GROUP NDX_FILE=index.ndx NDX_GROUP=vector1_residues_region
+norm1: GROUP NDX_FILE=index.ndx NDX_GROUP=vector2_residues_region
+
+
+
+
+
+tcf_center: COM ATOMS=chainb
+ref_center1: COM ATOMS=ref1
+norm_center1: COM ATOMS=norm1
+
+
+
+
+#first distvec
+
+b1: DISTANCE ATOMS=ref_center1,norm_center1 NOPBC
+bc1: DISTANCE ATOMS=ref_center1,norm_center1 COMPONENTS NOPBC
+d1: DISTANCE ATOMS=ref_center1,tcf_center NOPBC
+hd1: DISTANCE ATOMS=norm_center1,tcf_center NOPBC
+theta1: ANGLE ATOMS=norm_center1,ref_center1,tcf_center NOPBC
+upper_walls1: UPPER_WALLS ARG=theta1 AT=0.8 KAPPA=10000 EXP=2 OFFSET=0
+norm_b1: MATHEVAL ARG=b1,bc1.x,bc1.y,bc1.z VAR=b,bx,by,bz FUNC=b/sqrt(bx*bx+by*by+bz*bz) PERIODIC=NO
+distvec1: MATHEVAL ARG=norm_b1,d1,theta1 FUNC=x*y*cos(z) PERIODIC=NO
+
+
+
+
+c2: COORDINATION GROUPA=chaina  GROUPB=chainb R_0=0.7
+
+rg: GYRATION TYPE=RADIUS ATOMS=chainb 
+
+metad: PBMETAD ARG=distvec1,c2,rg  SIGMA=0.15,2,0.1 HEIGHT=1.0 PACE=500 FILE=HILLS_x,HILLS_c2,HILLS_rg BIASFACTOR=20 TEMP=300 WALKERS_MPI WALKERS_DIR=../
+
+PRINT ARG=distvec1,theta1,hd1,c2,rg,metad.bias  STRIDE=50 FILE=COLVAR
+
